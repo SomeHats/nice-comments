@@ -1,19 +1,25 @@
+/*jslint browser: true, devel: true, indent: 2*/
+/*globals CodeMirror*/
+
 (function (document) {
   'use strict';
 
+  var lintStr = "/*jslint browser: true, devel: true, indent: 2*/\n";
+  lintStr += "/*globals CodeMirror*/\n";
+
   function startEditor(code) {
     var el = document.getElementById("code");
-    
+
     el.innerHTML = "";
-    
-    CodeMirror(el, {
+
+    code = code.replace(lintStr, "");
+
+    new CodeMirror(el, {
       value: code,
       mode: "javascript",
       lineWrapping: true,
       niceComments: true
     });
-
-    //window.niceComments(editor);
   }
 
   function loadCode() {
