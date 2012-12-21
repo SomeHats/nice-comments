@@ -31,6 +31,7 @@ section {
   border: 1px solid #eee;
   height: auto;
   width: 70%;
+  font-size: 14px;
   margin-left: 30%;
   overflow: visible;
 }
@@ -52,7 +53,7 @@ section {
 
 .comment {
   font-family: 'Open Sans';
-  font-size: 0.8em;
+  font-size: 14px;
   line-height: 1.3;
   display: inline-block;
 

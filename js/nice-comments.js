@@ -14,24 +14,36 @@
     }
   }
 
-  function updateComments(cm, coms) {
-    var l = cm.niceComments.comments.length,
-      comments = [],
-      current, comment, i;
+  function layout(comments) {
+    var i, last, current, l, bounds, pad;
 
-    // Clear all old comments
-    for (i = 0; i < l; i++) {
-      cm.removeLineWidget(cm.niceComments.comments[i].widget);
+    for (i = 1, l = comments.length; i < l; i++) {
+      if (comments.length !== 0) {
+        last = comments[i - 1];
+        current = comments[i];
+        current.cont.style.height = 0;
+        current.el.style.marginTop = 0;
+        bounds = {
+          current: current.el.getBoundingClientRect(),
+          last: last.el.getBoundingClientRect()
+        };
+
+        if (bounds.current.top - spacing < bounds.last.bottom) {
+          pad = bounds.last.bottom - bounds.current.top + spacing;
+          current.cont.style.height = pad + 'px';
+          current.el.style.marginTop = pad + 'px';
+        }
+      }
     }
+  }
 
-    function newComment() {
-      current = {};
-      current.start = comment.loc.start.line;
-      current.end = comment.loc.end.line;
-      current.value = comment.value;
-    }
+  function updateComments(cm, data) {
+    var comments = cm.niceComments.comments,
+      current, comment, i, l, coms;
 
-    function saveComment() {
+    coms = data.comments;
+
+    function drawComment(comment, index) {
       var cont = document.createElement('div'),
         el = document.createElement('div'),
         last,
@@ -39,61 +51,43 @@
         pad;
       cont.className = 'commentCont';
       el.className = 'comment';
-      el.innerHTML = current.value;
+      el.innerHTML = comment.value;
       cont.appendChild(el);
 
-      current.cont = cont;
-      current.el = el;
-      current.widget = cm.addLineWidget(current.end - 1, cont, {
+      comment.cont = cont;
+      comment.el = el;
+      comment.widget = cm.addLineWidget(comment.end.line - 1, cont, {
         noHScroll: true
       });
 
-      if (comments.length !== 0) {
-        last = comments[comments.length - 1];
-        bounds = {
-          current: el.getBoundingClientRect(),
-          last: last.el.getBoundingClientRect()
-        };
-
-        if (bounds.current.top - spacing < bounds.last.bottom) {
-          pad = bounds.last.bottom - bounds.current.top + spacing;
-          cont.style.height = pad + 'px';
-          el.style.marginTop = pad + 'px';
-        }
-
-        console.log(bounds);
-      }
-
-      comments.push(current);
+      comments[index] = comment;
     }
 
-    l = coms.length;
+    if (data.redraw === "all") {
+      // Redraw ALL the line widgets!
+      comments = [];
+      l = cm.niceComments.comments.length;
+      for (i = 0; i < l; i++) {
+        cm.removeLineWidget(cm.niceComments.comments[i].widget);
+      }
 
-    // Cycle through all the comments from Esprima...
-    for (i = 0; i < l; i++) {
-      comment = coms[i];
-      // If no comments have been worked on before, set one up.
-      if (current === undefined) {
-        newComment();
-      } else {
-        // If this comment doesn't immediately follow the previous...
-        if (current.end + 1 !== comment.loc.start.line) {
-          // ... Save the last comment, and start a new one.
-          saveComment();
-          console.log(current.value);
-          newComment();
-        } else {
-          // Otherwise, assume these are two parts of the same comment and join
-          // them together.
-          current.end = comment.loc.end.line;
-          current.value += comment.value;
-        }
+      // Draw everything
+      l = coms.length;
+      for (i = 0; i < l; i++) {
+        drawComment(coms[i], i);
+      }
+    } else {
+      // Redraw specified line widgets
+      l = data.redraw.length;
+      for (i = 0; i < l; i++) {
+        cm.removeLineWidget(cm.niceComments.comments[data.redraw[i]].widget);
+        drawComment(coms[data.redraw[i]], data.redraw[i]);
       }
     }
-    saveComment();
 
-    console.log(" \n", " \n", "----------------------", "\n ", " \n");
     cm.niceComments.comments = comments;
+
+    layout(comments);
   }
 
   CodeMirror.defineOption('niceComments', false, function (cm, val) {
@@ -111,9 +105,13 @@
       cm.niceComments.parser = new Worker('js/worker.js');
 
       cm.niceComments.parser.onmessage = function (event) {
-        console.log(event.data);
-        if (event.data !== "error") {
-          updateComments(cm, event.data);
+        var d = event.data;
+        if (d === "error") {
+          console.log("error");
+        } else {
+          if (d.redraw !== "none") {
+            updateComments(cm, d);
+          }
         }
         cm.niceComments.parser.busy = false;
       };
