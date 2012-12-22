@@ -34,6 +34,7 @@ section {
   font-size: 14px;
   margin-left: 30%;
   overflow: visible;
+  line-height: 1.2em;
 }
 .CodeMirror-scroll, .CodeMirror-wrap .CodeMirror-scroll {
   overflow: visible;
@@ -54,7 +55,7 @@ section {
 .comment {
   font-family: 'Open Sans';
   font-size: 14px;
-  line-height: 1.3;
+  line-height: 1.4;
   display: inline-block;
 
   position: relative;
@@ -73,4 +74,13 @@ section {
   border-radius: 5px;
 
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+}
+
+.comment img {
+  width: 100%;
+}
+
+.com-hover {
+  background: #CBDFFE;
+  background: rgba(0, 100, 255, 0.2);
 }

@@ -1,13 +1,19 @@
-(function(self) {
+/*jslint browser: true, devel: true, indent: 2*/
+/*globals esprima, self*/
+(function (self) {
+  "use strict";
+
   var last = [];
 
-  self.onmessage = function(event) {
+  self.onmessage = function (event) {
     var res,
-    comments = [],
-    current,
-    comment,
-    l,
-    i;
+      comments = [],
+      current,
+      comment,
+      lc,
+      cc,
+      l,
+      i;
 
     try {
       res = esprima.parse(event.data, {
@@ -15,7 +21,7 @@
         comment: true,
         tolerant: true
       });
-    } catch(e) {
+    } catch (e) {
       res = "error";
     }
 
@@ -26,13 +32,13 @@
       current.value = comment.value;
     }
 
-    if (res!== "error") {
+    if (res !== "error") {
       // We don't want to send everything from Esprima:
       res.body = undefined;
 
       // Cycle through all the comments from Esprima...
       l = res.comments.length;
-      for (i = 0; i < l; i++) {
+      for (i = 0; i < l; i += 1) {
         comment = res.comments[i];
         // If no comments have been worked on before, set one up.
         if (current === undefined) {
@@ -62,27 +68,28 @@
         // If there are the same number of comments, check to see if any have
         // changed.
         res.redraw = [];
-        for (i = 0, l = comments.length; i < l; i++) {
-          var lc = last[i],
+        for (i = 0, l = comments.length; i < l; i += 1) {
+          lc = last[i];
           cc = comments[i];
+
           if (lc.start.line !== cc.start.line || lc.end.line !== cc.end.line ||
-            lc.start.column !== cc.start.column || lc.end.column !== cc.end.column ||
-            lc.value !== cc.value) {
+              lc.start.column !== cc.start.column || lc.end.column !== cc.end.column ||
+              lc.value !== cc.value) {
             // This has changed!
-          res.redraw.push(i);
+            res.redraw.push(i);
+          }
+        }
+
+        if (res.redraw.length === 0) {
+          res.redraw = "none";
         }
       }
-
-      if (res.redraw.length === 0) {
-        res.redraw = "none";
-      }
     }
-  }
 
-  self.postMessage(res);
+    self.postMessage(res);
 
-  last = comments;
-};
+    last = comments;
+  };
 }(self));
 
 /*
@@ -114,8 +121,7 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
   THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   */
-
-  /*jslint bitwise:true plusplus:true */
+/*jslint bitwise:true plusplus:true */
 /*global esprima:true, define:true, exports:true, window: true,
 throwError: true, generateStatement: true, peek: true,
 parseAssignmentExpression: true, parseBlock: true, parseExpression: true,
@@ -124,14 +130,14 @@ parseFunctionSourceElements: true, parseVariableIdentifier: true,
 parseLeftHandSideExpression: true,
 parseStatement: true, parseSourceElement: true */
 
-(function(root, factory) {
+(function (root, factory) {
   'use strict';
 
   // Universal Module Definition (UMD) to support AMD, CommonJS/Node.js,
   // Rhino, and plain browser loading.
-  if(typeof define === 'function' && define.amd) {
+  if (typeof define === 'function' && define.amd) {
     define(['exports'], factory);
-  } else if(typeof exports !== 'undefined') {
+  } else if (typeof exports !== 'undefined') {
     factory(exports);
   } else {
     factory((root.esprima = {}));
@@ -260,13 +266,13 @@ parseStatement: true, parseSourceElement: true */
   // Do NOT use this to enforce a certain condition on any user input.
 
   function assert(condition, message) {
-    if(!condition) {
+    if (!condition) {
       throw new Error('ASSERT: ' + message);
     }
   }
 
   function isDecimalDigit(ch) {
-    return(ch >= 48 && ch <= 57); // 0..9
+    return (ch >= 48 && ch <= 57); // 0..9
   }
 
   function isHexDigit(ch) {
@@ -281,65 +287,65 @@ parseStatement: true, parseSourceElement: true */
   // 7.2 White Space
 
   function isWhiteSpace(ch) {
-    return(ch === 32) || // space
-    (ch === 9) || // tab
-    (ch === 0xB) || (ch === 0xC) || (ch === 0xA0) || (ch >= 0x1680 && '\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\uFEFF'.indexOf(String.fromCharCode(ch)) > 0);
+    return (ch === 32) || // space
+      (ch === 9) || // tab
+      (ch === 0xB) || (ch === 0xC) || (ch === 0xA0) || (ch >= 0x1680 && '\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\uFEFF'.indexOf(String.fromCharCode(ch)) > 0);
   }
 
   // 7.3 Line Terminators
 
   function isLineTerminator(ch) {
-    return(ch === 10) || (ch === 13) || (ch === 0x2028) || (ch === 0x2029);
+    return (ch === 10) || (ch === 13) || (ch === 0x2028) || (ch === 0x2029);
   }
 
   // 7.6 Identifier Names and Identifiers
 
   function isIdentifierStart(ch) {
-    return(ch === 36) || (ch === 95) || // $ (dollar) and _ (underscore)
-    (ch >= 65 && ch <= 90) || // A..Z
-    (ch >= 97 && ch <= 122) || // a..z
-    (ch === 92) || // \ (backslash)
-    ((ch >= 0x80) && Regex.NonAsciiIdentifierStart.test(String.fromCharCode(ch)));
+    return (ch === 36) || (ch === 95) || // $ (dollar) and _ (underscore)
+      (ch >= 65 && ch <= 90) || // A..Z
+      (ch >= 97 && ch <= 122) || // a..z
+      (ch === 92) || // \ (backslash)
+      ((ch >= 0x80) && Regex.NonAsciiIdentifierStart.test(String.fromCharCode(ch)));
   }
 
   function isIdentifierPart(ch) {
-    return(ch === 36) || (ch === 95) || // $ (dollar) and _ (underscore)
-    (ch >= 65 && ch <= 90) || // A..Z
-    (ch >= 97 && ch <= 122) || // a..z
-    (ch >= 48 && ch <= 57) || // 0..9
-    (ch === 92) || // \ (backslash)
-    ((ch >= 0x80) && Regex.NonAsciiIdentifierPart.test(String.fromCharCode(ch)));
+    return (ch === 36) || (ch === 95) || // $ (dollar) and _ (underscore)
+      (ch >= 65 && ch <= 90) || // A..Z
+      (ch >= 97 && ch <= 122) || // a..z
+      (ch >= 48 && ch <= 57) || // 0..9
+      (ch === 92) || // \ (backslash)
+      ((ch >= 0x80) && Regex.NonAsciiIdentifierPart.test(String.fromCharCode(ch)));
   }
 
   // 7.6.1.2 Future Reserved Words
 
   function isFutureReservedWord(id) {
-    switch(id) {
-      case 'class':
-      case 'enum':
-      case 'export':
-      case 'extends':
-      case 'import':
-      case 'super':
+    switch (id) {
+    case 'class':
+    case 'enum':
+    case 'export':
+    case 'extends':
+    case 'import':
+    case 'super':
       return true;
-      default:
+    default:
       return false;
     }
   }
 
   function isStrictModeReservedWord(id) {
-    switch(id) {
-      case 'implements':
-      case 'interface':
-      case 'package':
-      case 'private':
-      case 'protected':
-      case 'public':
-      case 'static':
-      case 'yield':
-      case 'let':
+    switch (id) {
+    case 'implements':
+    case 'interface':
+    case 'package':
+    case 'private':
+    case 'protected':
+    case 'public':
+    case 'static':
+    case 'yield':
+    case 'let':
       return true;
-      default:
+    default:
       return false;
     }
   }
@@ -351,31 +357,31 @@ parseStatement: true, parseSourceElement: true */
   // 7.6.1.1 Keywords
 
   function isKeyword(id) {
-    if(strict && isStrictModeReservedWord(id)) {
+    if (strict && isStrictModeReservedWord(id)) {
       return true;
     }
 
     // 'const' is specialized as Keyword in V8.
     // 'yield' and 'let' are for compatiblity with SpiderMonkey and ES.next.
     // Some others are from future reserved words.
-    switch(id.length) {
-      case 2:
-      return(id === 'if') || (id === 'in') || (id === 'do');
-      case 3:
-      return(id === 'var') || (id === 'for') || (id === 'new') || (id === 'try') || (id === 'let');
-      case 4:
-      return(id === 'this') || (id === 'else') || (id === 'case') || (id === 'void') || (id === 'with') || (id === 'enum');
-      case 5:
-      return(id === 'while') || (id === 'break') || (id === 'catch') || (id === 'throw') || (id === 'const') || (id === 'yield') || (id === 'class') || (id === 'super');
-      case 6:
-      return(id === 'return') || (id === 'typeof') || (id === 'delete') || (id === 'switch') || (id === 'export') || (id === 'import');
-      case 7:
-      return(id === 'default') || (id === 'finally') || (id === 'extends');
-      case 8:
-      return(id === 'function') || (id === 'continue') || (id === 'debugger');
-      case 10:
-      return(id === 'instanceof');
-      default:
+    switch (id.length) {
+    case 2:
+      return (id === 'if') || (id === 'in') || (id === 'do');
+    case 3:
+      return (id === 'var') || (id === 'for') || (id === 'new') || (id === 'try') || (id === 'let');
+    case 4:
+      return (id === 'this') || (id === 'else') || (id === 'case') || (id === 'void') || (id === 'with') || (id === 'enum');
+    case 5:
+      return (id === 'while') || (id === 'break') || (id === 'catch') || (id === 'throw') || (id === 'const') || (id === 'yield') || (id === 'class') || (id === 'super');
+    case 6:
+      return (id === 'return') || (id === 'typeof') || (id === 'delete') || (id === 'switch') || (id === 'export') || (id === 'import');
+    case 7:
+      return (id === 'default') || (id === 'finally') || (id === 'extends');
+    case 8:
+      return (id === 'function') || (id === 'continue') || (id === 'debugger');
+    case 10:
+      return (id === 'instanceof');
+    default:
       return false;
     }
   }
@@ -388,65 +394,68 @@ parseStatement: true, parseSourceElement: true */
     blockComment = false;
     lineComment = false;
 
-    while(index < length) {
+    while (index < length) {
       ch = source.charCodeAt(index);
 
-      if(lineComment) {
+      if (lineComment) {
         ++index;
-        if(isLineTerminator(ch)) {
+        if (isLineTerminator(ch)) {
           lineComment = false;
-          if(ch === 13 && source.charCodeAt(index) === 10) {
+          if (ch === 13 && source.charCodeAt(index) === 10) {
             ++index;
-          }++lineNumber;
+          }
+          ++lineNumber;
           lineStart = index;
         }
-      } else if(blockComment) {
-        if(isLineTerminator(ch)) {
-          if(ch === 13 && source.charCodeAt(index + 1) === 10) {
+      } else if (blockComment) {
+        if (isLineTerminator(ch)) {
+          if (ch === 13 && source.charCodeAt(index + 1) === 10) {
             ++index;
-          }++lineNumber;
+          }
+          ++lineNumber;
           ++index;
           lineStart = index;
-          if(index >= length) {
+          if (index >= length) {
             throwError({}, Messages.UnexpectedToken, 'ILLEGAL');
           }
         } else {
           ch = source.charCodeAt(index++);
-          if(index >= length) {
+          if (index >= length) {
             throwError({}, Messages.UnexpectedToken, 'ILLEGAL');
           }
           // Block comment ends with '*/' (char #42, char #47).
-          if(ch === 42) {
+          if (ch === 42) {
             ch = source.charCodeAt(index);
-            if(ch === 47) {
+            if (ch === 47) {
               ++index;
               blockComment = false;
             }
           }
         }
-      } else if(ch === 47) {
+      } else if (ch === 47) {
         ch = source.charCodeAt(index + 1);
         // Line comment starts with '//' (char #47, char #47).
-        if(ch === 47) {
+        if (ch === 47) {
           index += 2;
           lineComment = true;
-        } else if(ch === 42) {
+        } else if (ch === 42) {
           // Block comment starts with '/*' (char #47, char #42).
           index += 2;
           blockComment = true;
-          if(index >= length) {
+          if (index >= length) {
             throwError({}, Messages.UnexpectedToken, 'ILLEGAL');
           }
         } else {
           break;
         }
-      } else if(isWhiteSpace(ch)) {
+      } else if (isWhiteSpace(ch)) {
         ++index;
-      } else if(isLineTerminator(ch)) {
+      } else if (isLineTerminator(ch)) {
         ++index;
-        if(ch === 13 && source.charCodeAt(index) === 10) {
+        if (ch === 13 && source.charCodeAt(index) === 10) {
           ++index;
-        }++lineNumber;
+        }
+        ++lineNumber;
         lineStart = index;
       } else {
         break;
@@ -458,8 +467,8 @@ parseStatement: true, parseSourceElement: true */
     var i, len, ch, code = 0;
 
     len = (prefix === 'u') ? 4 : 2;
-    for(i = 0; i < len; ++i) {
-      if(index < length && isHexDigit(source[index])) {
+    for (i = 0; i < len; ++i) {
+      if (index < length && isHexDigit(source[index])) {
         ch = source[index++];
         code = code * 16 + '0123456789abcdef'.indexOf(ch.toLowerCase());
       } else {
@@ -476,32 +485,35 @@ parseStatement: true, parseSourceElement: true */
     id = String.fromCharCode(ch);
 
     // '\u' (char #92, char #117) denotes an escaped character.
-    if(ch === 92) {
-      if(source.charCodeAt(index) !== 117) {
+    if (ch === 92) {
+      if (source.charCodeAt(index) !== 117) {
         throwError({}, Messages.UnexpectedToken, 'ILLEGAL');
-      }++index;
+      }
+      ++index;
       ch = scanHexEscape('u');
-      if(!ch || ch === '\\' || !isIdentifierStart(ch.charCodeAt(0))) {
+      if (!ch || ch === '\\' || !isIdentifierStart(ch.charCodeAt(0))) {
         throwError({}, Messages.UnexpectedToken, 'ILLEGAL');
       }
       id = ch;
     }
 
-    while(index < length) {
+    while (index < length) {
       ch = source.charCodeAt(index);
-      if(!isIdentifierPart(ch)) {
+      if (!isIdentifierPart(ch)) {
         break;
-      }++index;
+      }
+      ++index;
       id += String.fromCharCode(ch);
 
       // '\u' (char #92, char #117) denotes an escaped character.
-      if(ch === 92) {
+      if (ch === 92) {
         id = id.substr(0, id.length - 1);
-        if(source.charCodeAt(index) !== 117) {
+        if (source.charCodeAt(index) !== 117) {
           throwError({}, Messages.UnexpectedToken, 'ILLEGAL');
-        }++index;
+        }
+        ++index;
         ch = scanHexEscape('u');
-        if(!ch || ch === '\\' || !isIdentifierPart(ch.charCodeAt(0))) {
+        if (!ch || ch === '\\' || !isIdentifierPart(ch.charCodeAt(0))) {
           throwError({}, Messages.UnexpectedToken, 'ILLEGAL');
         }
         id += ch;
@@ -515,14 +527,14 @@ parseStatement: true, parseSourceElement: true */
     var start, ch;
 
     start = index++;
-    while(index < length) {
+    while (index < length) {
       ch = source.charCodeAt(index);
-      if(ch === 92) {
+      if (ch === 92) {
         // Blackslash (char #92) marks Unicode escape sequence.
         index = start;
         return getEscapedIdentifier();
       }
-      if(isIdentifierPart(ch)) {
+      if (isIdentifierPart(ch)) {
         ++index;
       } else {
         break;
@@ -542,13 +554,13 @@ parseStatement: true, parseSourceElement: true */
 
     // There is no keyword or literal with only one character.
     // Thus, it must be an identifier.
-    if(id.length === 1) {
+    if (id.length === 1) {
       type = Token.Identifier;
-    } else if(isKeyword(id)) {
+    } else if (isKeyword(id)) {
       type = Token.Keyword;
-    } else if(id === 'null') {
+    } else if (id === 'null') {
       type = Token.NullLiteral;
-    } else if(id === 'true' || id === 'false') {
+    } else if (id === 'true' || id === 'false') {
       type = Token.BooleanLiteral;
     } else {
       type = Token.Identifier;
@@ -568,11 +580,11 @@ parseStatement: true, parseSourceElement: true */
 
   function scanPunctuator() {
     var start = index,
-    code = source.charCodeAt(index),
-    code2, ch1 = source[index],
-    ch2, ch3, ch4;
+      code = source.charCodeAt(index),
+      code2, ch1 = source[index],
+      ch2, ch3, ch4;
 
-    switch(code) {
+    switch (code) {
 
       // Check for most common single-character punctuators.
       case 46:

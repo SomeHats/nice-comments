@@ -1,20 +1,21 @@
 /*jslint browser: true, devel: true, indent: 2*/
-/*globals CodeMirror*/
+/*globals CodeMirror, Worker*/
 
 (function (document) {
   'use strict';
 
   var lintStr = "/*jslint browser: true, devel: true, indent: 2*/\n";
-  lintStr += "/*globals CodeMirror*/\n";
+  lintStr += "/*globals CodeMirror, Worker*/\n";
 
   function startEditor(code) {
-    var el = document.getElementById("code");
+    var el = document.getElementById("code"),
+      editor;
 
     el.innerHTML = "";
 
     code = code.replace(lintStr, "");
 
-    new CodeMirror(el, {
+    editor = new CodeMirror(el, {
       value: code,
       mode: "javascript",
       lineWrapping: true,
