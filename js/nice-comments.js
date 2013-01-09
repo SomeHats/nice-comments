@@ -46,8 +46,6 @@
   // Redraw and setup UI stuff for all comments that have been updated
   function updateComments(cm, data) {
     var comments = cm.niceComments.comments,
-      current,
-      comment,
       coms,
       i,
       l;
@@ -116,6 +114,15 @@
           comment.hoverMarker.clear();
           comment.hoverMarker = undefined;
         }
+      }, false);
+      
+      // When you double-click a comment, open up a HTML editor
+      el.addEventListener("dblclick", function () {
+        el.innerHTML = "";
+        comment.editor = CodeMirror(el, {
+          value: comment.value,
+          mode: "text/html"
+        })
       }, false);
 
       // Update the stored comment with our new data

@@ -47,6 +47,7 @@
           // If this comment doesn't immediately follow the previous...
           if (current.end.line + 1 !== comment.loc.start.line) {
             // ... Save the last comment, and start a new one.
+            current.value = current.value.trim();
             comments.push(current);
             newComment();
           } else {
@@ -57,6 +58,7 @@
           }
         }
       }
+      current.value = current.value.trim()
       comments.push(current);
 
       res.comments = comments;

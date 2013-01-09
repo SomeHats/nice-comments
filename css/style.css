@@ -84,3 +84,8 @@ section {
   background: #CBDFFE;
   background: rgba(0, 100, 255, 0.2);
 }
+
+.comment .CodeMirror {
+  width: 100%;
+  margin: 0;
+}
