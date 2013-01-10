@@ -8,148 +8,196 @@
   */
   'use strict';
 
-  // How far should there be between each comment?
-  var spacing = 10;
-
-  // If the parser isn't already working, send it some new data.
-  function parse(cm) {
-    if (!cm.niceComments.parser.busy) {
-      cm.niceComments.parser.busy = true;
-      cm.niceComments.parser.postMessage(cm.getValue());
-    }
+  // Comment holds all the information about a comment, and is in control of
+  // rendering and updating it.
+  function Comment(comment, cm) {
+    this.start = comment.start;
+    this.end = comment.end;
+    this.value = comment.value;
+    this.editor = cm;
   }
 
-  // Make sure there's space between all the comments. This is a little dumb
-  // as it sets the spacing on all comments, regardless of which have been
-  // edited, but it does for this demo
-  function layout(comments) {
-    var i, last, current, l, bounds, pad;
+  // How much distance space should be between each comment
+  Comment.prototype.spacing = 10;
 
-    for (i = 1, l = comments.length; i < l; i += 1) {
-      last = comments[i - 1];
-      current = comments[i];
-      current.cont.style.height = 0;
-      current.el.style.marginTop = 0;
+  // Give the comment a reference to the comment before it
+  Comment.prototype.setPrevious = function (previous) {
+    if (previous !== undefined) {
+      this.previous = previous;
+      previous.next = this;
+    } else {
+      this.previous = undefined;
+    }
+  };
+
+  // After a comment has been rendered and had 'next' set, it can have any
+  // event listeners set and spaced out in relation to other comments
+  Comment.prototype.activate = function () {
+    this.setBehaviour();
+    this.markSource();
+    this.layout();
+  };
+
+  // Make sure we can keep track of the comment in the text.
+  Comment.prototype.markSource = function () {
+    var end;
+
+    // Hide comments in the editor. See <a
+    // href="http://codemirror.net/doc/manual.html#markText">markText</a> in
+    // the CodeMirror docs for more.
+    this.marker = this.editor.markText({
+      line: this.start.line - 1,
+      ch: this.start.column
+    }, {
+      line: this.end.line - 1,
+      ch: this.end.column
+    }, {
+      collapsed: true,
+      readOnly: true
+    });
+
+    // Find the start of the next comment or the end of the document
+    if (this.next !== undefined) {
+      end = this.next.start.line - 1;
+    } else {
+      end = this.editor.lineCount() + 1;
+    }
+
+    // Mark the area the comment seems to refer to, so we can track it
+    this.area = this.editor.markText({
+      line: this.end.line,
+      ch: 0
+    }, {
+      line: end,
+      ch: 0
+    });
+  };
+
+  // Create DOM stuff and attach to the editor
+  Comment.prototype.render = function () {
+    var container, el;
+
+    // Create the HTML structure for the visible comments
+    container = document.createElement("div");
+    el = document.createElement("div");
+
+    container.className = 'commentCont';
+    el.className = 'comment';
+    el.innerHTML = this.value;
+    container.appendChild(el);
+
+    // Save the elements in the comment object
+    this.container = container;
+    this.el = el;
+
+    // Attach the element to <a href="http://codemirror.net/">CodeMirror</a>
+    this.widget = this.editor.addLineWidget(this.end.line, container, {
+      noHScroll: true,
+      above: true
+    });
+  };
+
+  // Interactivey stuff
+  Comment.prototype.setBehaviour = function () {
+    var el = this.el,
+      comment = this;
+    // When you hover over a comment, highlight the corresponding code
+    el.addEventListener("mouseover", function () {
+      var range = comment.area.find();
+      comment.hoverMarker = comment.editor.markText(
+        range.from,
+        range.to,
+        { className: "com-hover" }
+      );
+    }, false);
+
+    // and when your mouse leaves the comment, remove the highlight
+    el.addEventListener("mouseout", function () {
+      if (comment.hoverMarker !== undefined) {
+        comment.hoverMarker.clear();
+        comment.hoverMarker = undefined;
+      }
+    }, false);
+
+    // Start an HTML editor when code is double clicked
+    el.addEventListener("dblclick", function () {
+      el.innerHTML = "";
+      comment.editor = new CodeMirror(el, {
+        value: comment.value,
+        mode: "text/html"
+      });
+    }, false);
+  };
+
+  // Make sure the gap between this comment and the next is big enough that they
+  // don't overlap each other.
+  Comment.prototype.layout = function () {
+    var next = this.next,
+      bounds,
+      pad;
+
+    if (next !== undefined) {
+      next.container.style.height = 0;
+      next.el.style.marginTop = 0;
       bounds = {
-        current: current.el.getBoundingClientRect(),
-        last: last.el.getBoundingClientRect()
+        current: this.el.getBoundingClientRect(),
+        next: next.el.getBoundingClientRect()
       };
 
-      if (bounds.current.top - spacing < bounds.last.bottom) {
-        pad = bounds.last.bottom - bounds.current.top + spacing;
-        current.cont.style.height = pad + 'px';
-        current.el.style.marginTop = pad + 'px';
+      if (bounds.next.top - this.spacing < bounds.current.bottom) {
+        pad = bounds.current.bottom - bounds.next.top + this.spacing;
+        next.container.style.height = pad + 'px';
+        next.el.style.marginTop = pad + 'px';
       }
     }
-  }
+  };
 
   // Redraw and setup UI stuff for all comments that have been updated
   function updateComments(cm, data) {
     var comments = cm.niceComments.comments,
-      coms,
+      comment,
+      ref,
       i,
       l;
 
-    coms = data.comments;
-
-    // Draw a particular comment to the screen, and set any interactions.
-    function drawComment(comment, index) {
-      if (comment === undefined) { return; }
-
-      // Create the HTML structure for the visible comments
-      var cont = document.createElement('div'),
-        el = document.createElement('div'),
-        end;
-
-      cont.className = 'commentCont';
-      el.className = 'comment';
-      el.innerHTML = comment.value;
-      cont.appendChild(el);
-
-      // Save the elements in the comment object
-      comment.cont = cont;
-      comment.el = el;
-
-      // Hide comments in the editor. See <a
-      // href="http://codemirror.net/doc/manual.html#markText">markText</a> in
-      // the CodeMirror docs for more.
-      comment.marker = cm.markText(
-        {line: comment.start.line - 1, ch: comment.start.column},
-        {line: comment.end.line - 1, ch: comment.end.column},
-        {collapsed: true, readOnly: true}
-      );
-
-      // Attach the element to <a href="http://codemirror.net/">CodeMirror</a>
-      comment.widget = cm.addLineWidget(comment.end.line, cont, {
-        noHScroll: true,
-        above: true
-      });
-
-      // Find the start of the next comment or the end of the document
-      if (index + 1 < coms.length) {
-        end = coms[index + 1].start.line - 1;
-      } else {
-        end = cm.lineCount() + 1;
-      }
-
-      // Mark the area the comment seems to refer to, so we can track it
-      comment.area = cm.markText(
-        {line: comment.end.line, ch: 0},
-        {line: end, ch: 0}
-      );
-
-      // When you hover over a comment, highlight the corresponding code
-      el.addEventListener("mouseover", function () {
-        var range = comment.area.find();
-        comment.hoverMarker = cm.markText(
-          range.from,
-          range.to,
-          {className: "com-hover"}
-        );
-      }, false);
-
-      // and when your mouse leaves the comment, remove the highlight
-      el.addEventListener("mouseout", function () {
-        if (comment.hoverMarker !== undefined) {
-          comment.hoverMarker.clear();
-          comment.hoverMarker = undefined;
-        }
-      }, false);
-      
-      // When you double-click a comment, open up a HTML editor
-      el.addEventListener("dblclick", function () {
-        el.innerHTML = "";
-        comment.editor = CodeMirror(el, {
-          value: comment.value,
-          mode: "text/html"
-        })
-      }, false);
-
-      // Update the stored comment with our new data
-      comments[index] = comment;
-    }
-
     // <img src="http://i.imgur.com/6bbId.jpg">
     if (data.redraw === "all") {
-      comments = [];
-      l = cm.niceComments.comments.length;
+      // Remove all the old comments and line widgets etc. from DOM
+      l = comments.length;
       for (i = 0; i < l; i += 1) {
-        // Remove comment widget and unhide code comments
-        cm.removeLineWidget(cm.niceComments.comments[i].widget);
-        cm.niceComments.comments[i].marker.clear();
+        cm.removeLineWidget(comments[i].widget);
+        comments[i].marker.clear();
       }
 
-      // Draw everything
-      l = coms.length;
-      for (i = 0; i < l; i += 1) {
-        drawComment(coms[i], i);
+      // Clear old saved comments
+      comments = [];
+
+      // Render and save all the new comments
+      while (data.comments.length) {
+        comment = new Comment(data.comments.shift(), cm);
+        
+        comment.render();
+
+        if (comments.length > 0) {
+          comment.setPrevious(comments[comments.length - 1]);
+          comment.previous.activate();
+        }
+
+        comments.push(comment);
       }
+      comment.activate();
+      // Only redraw comments which have changed.
     } else {
-      // Redraw specified line widgets
       l = data.redraw.length;
       for (i = 0; i < l; i += 1) {
-        cm.removeLineWidget(cm.niceComments.comments[data.redraw[i]].widget);
-        drawComment(coms[data.redraw[i]], data.redraw[i]);
+        ref = data.redraw[i];
+        cm.removeLineWidget(comments[ref].widget);
+        comment = new Comment(data.comments.shift(), cm);
+        if (ref !== 0) {
+          comment.setPrevious(comments[ref - 1]);
+        }
+        comment.draw();
+        comments[ref] = comment;
       }
     }
 
@@ -160,9 +208,15 @@
     </ol> */
     cm.niceComments.comments = comments;
 
-    layout(comments);
-
     cm.refresh();
+  }
+  
+  // If the parser isn't already working, send it some new data.
+  function parse(cm) {
+    if (!cm.niceComments.parser.busy) {
+      cm.niceComments.parser.busy = true;
+      cm.niceComments.parser.postMessage(cm.getValue());
+    }
   }
 
   // Add a setting for nice-comments to CodeMirror so it can be run on setup
@@ -211,9 +265,14 @@
       parse(cm);
 
       // Capture load events and re-layout the comments. This is to stop
-      // images or similar sitting on top of other comments.
+      // images or similar sitting on top of other comments. Hacky.
       document.addEventListener("load", function (e) {
-        layout(cm.niceComments.comments);
+        var l = cm.niceComments.comments.length,
+          i;
+
+        for (i = 0; i < l; i += 1) {
+          cm.niceComments.comments[i].layout();
+        }
       }, true);
     }
   });
