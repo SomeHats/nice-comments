@@ -75,20 +75,37 @@
 
   // Create DOM stuff and attach to the editor
   Comment.prototype.render = function () {
-    var container, el;
+    var container,
+      deleteButton,
+      editButton,
+      comment,
+      content;
 
     // Create the HTML structure for the visible comments
     container = document.createElement("div");
-    el = document.createElement("div");
+    comment = document.createElement("div");
+    content = document.createElement("div");
+    editButton = document.createElement("button");
+    deleteButton = document.createElement("button");
 
     container.className = 'commentCont';
-    el.className = 'comment';
-    el.innerHTML = this.value;
-    container.appendChild(el);
+    comment.className = 'comment';
+    editButton.className = 'edit';
+    deleteButton.className = 'delete';
+    content.innerHTML = this.value;
+    container.appendChild(comment)
+    comment.appendChild(editButton);
+    comment.appendChild(deleteButton);
+    comment.appendChild(content);
 
     // Save the elements in the comment object
-    this.container = container;
-    this.el = el;
+    this.dom = {
+      container: container,
+      comment: comment,
+      content: content,
+      edit: editButton,
+      delte: deleteButton
+    };
 
     // Attach the element to <a href="http://codemirror.net/">CodeMirror</a>
     this.widget = this.editor.addLineWidget(this.end.line, container, {
@@ -99,7 +116,7 @@
 
   // Interactivey stuff
   Comment.prototype.setBehaviour = function () {
-    var el = this.el,
+    var el = this.dom.content,
       comment = this;
     // When you hover over a comment, highlight the corresponding code
     el.addEventListener("mouseover", function () {
@@ -137,17 +154,17 @@
       pad;
 
     if (next !== undefined) {
-      next.container.style.height = 0;
-      next.el.style.marginTop = 0;
+      next.dom.container.style.height = 0;
+      next.dom.comment.style.marginTop = 0;
       bounds = {
-        current: this.el.getBoundingClientRect(),
-        next: next.el.getBoundingClientRect()
+        current: this.dom.comment.getBoundingClientRect(),
+        next: next.dom.comment.getBoundingClientRect()
       };
 
       if (bounds.next.top - this.spacing < bounds.current.bottom) {
         pad = bounds.current.bottom - bounds.next.top + this.spacing;
-        next.container.style.height = pad + 'px';
-        next.el.style.marginTop = pad + 'px';
+        next.dom.container.style.height = pad + 'px';
+        next.dom.comment.style.marginTop = pad + 'px';
       }
     }
   };
