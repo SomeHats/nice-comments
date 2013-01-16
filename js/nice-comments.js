@@ -20,6 +20,12 @@
   // How much distance space should be between each comment
   Comment.prototype.spacing = 10;
 
+  Comment.prototype.set = function (value) {
+    this.value = value;
+    this.el.innerHTML = value;
+    this.layout();
+  };
+
   // Give the comment a reference to the comment before it
   Comment.prototype.setPrevious = function (previous) {
     if (previous !== undefined) {
@@ -102,7 +108,7 @@
     var el = this.el,
       comment = this;
     // When you hover over a comment, highlight the corresponding code
-    el.addEventListener("mouseover", function () {
+    this.container.addEventListener("mouseover", function () {
       var range = comment.area.find();
       comment.hoverMarker = comment.editor.markText(
         range.from,
@@ -112,7 +118,7 @@
     }, false);
 
     // and when your mouse leaves the comment, remove the highlight
-    el.addEventListener("mouseout", function () {
+    this.container.addEventListener("mouseout", function () {
       if (comment.hoverMarker !== undefined) {
         comment.hoverMarker.clear();
         comment.hoverMarker = undefined;
@@ -121,10 +127,29 @@
 
     // Start an HTML editor when code is double clicked
     el.addEventListener("dblclick", function () {
+      var editor, editEl, marker;
+
+      marker = comment.hoverMarker;
+      comment.hoverMarker = undefined;
+
       el.innerHTML = "";
-      comment.editor = new CodeMirror(el, {
+      editEl = document.createElement("div");
+      el.appendChild(editEl);
+      editor = comment.editor = new CodeMirror(editEl, {
         value: comment.value,
         mode: "text/html"
+      });
+
+      comment.layout();
+      editor.focus();
+
+      editor.on("change", function () {
+        comment.layout();
+      });
+
+      editor.on("blur", function () {
+        comment.set(editor.getValue());
+        marker.clear();
       });
     }, false);
   };
@@ -175,7 +200,7 @@
       // Render and save all the new comments
       while (data.comments.length) {
         comment = new Comment(data.comments.shift(), cm);
-        
+
         comment.render();
 
         if (comments.length > 0) {
@@ -210,7 +235,7 @@
 
     cm.refresh();
   }
-  
+
   // If the parser isn't already working, send it some new data.
   function parse(cm) {
     if (!cm.niceComments.parser.busy) {
@@ -266,7 +291,7 @@
 
       // Capture load events and re-layout the comments. This is to stop
       // images or similar sitting on top of other comments. Hacky.
-      document.addEventListener("load", function (e) {
+      document.addEventListener("load", function () {
         var l = cm.niceComments.comments.length,
           i;
 
