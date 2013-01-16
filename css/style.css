@@ -100,15 +100,21 @@ section {
   position: absolute;
   left: -20px;
   opacity: 0;
-  transition: opacity 0.5s ease;
+  -webkit-transition: opacity 0.3s ease;
+  -moz-transition: opacity 0.3s ease;
+  -ms-transition: opacity 0.3s ease;
+  -o-transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease;
 }
-.comment button.delete {
+
+.comment .delete {
   top: 30px;
   background: red;
 }
 
 .comment:hover button {
-  opacity: 0.7;
+  opacity: 0.6;
+  cursor: pointer;
 }
 
 .comment:hover button:hover {

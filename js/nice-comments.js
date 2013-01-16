@@ -98,8 +98,10 @@
     comment.className = 'comment';
     editButton.className = 'edit';
     deleteButton.className = 'delete';
+
     content.innerHTML = this.value;
-    container.appendChild(comment)
+
+    container.appendChild(comment);
     comment.appendChild(editButton);
     comment.appendChild(deleteButton);
     comment.appendChild(content);
@@ -125,20 +127,25 @@
     var el = this.dom.content,
       comment = this;
     // When you hover over a comment, highlight the corresponding code
-    this.container.addEventListener("mouseover", function () {
-      var range = comment.area.find();
-      comment.hoverMarker = comment.editor.markText(
-        range.from,
-        range.to,
-        { className: "com-hover" }
-      );
+    this.dom.comment.addEventListener("mouseover", function (e) {
+      var range;
+      if (this === e.target && !this.contains(e.relatedTarget)) {
+        range = comment.area.find();
+        comment.hoverMarker = comment.editor.markText(
+          range.from,
+          range.to,
+          { className: "com-hover" }
+        );
+      }
     }, false);
 
     // and when your mouse leaves the comment, remove the highlight
-    this.container.addEventListener("mouseout", function () {
-      if (comment.hoverMarker !== undefined) {
-        comment.hoverMarker.clear();
-        comment.hoverMarker = undefined;
+    this.dom.comment.addEventListener("mouseout", function (e) {
+      if (!this.contains(e.relatedTarget)) {
+        if (comment.hoverMarker !== undefined) {
+          comment.hoverMarker.clear();
+          comment.hoverMarker = undefined;
+        }
       }
     }, false);
 
