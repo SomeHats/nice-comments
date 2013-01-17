@@ -14,7 +14,7 @@
     this.start = comment.start;
     this.end = comment.end;
     this.value = comment.value;
-    this.editor = cm;
+    this.cm = cm;
   }
 
   // How much distance space should be between each comment
@@ -52,7 +52,7 @@
     // Hide comments in the editor. See <a
     // href="http://codemirror.net/doc/manual.html#markText">markText</a> in
     // the CodeMirror docs for more.
-    this.marker = this.editor.markText({
+    this.marker = this.cm.markText({
       line: this.start.line - 1,
       ch: this.start.column
     }, {
@@ -67,11 +67,11 @@
     if (this.next !== undefined) {
       end = this.next.start.line - 1;
     } else {
-      end = this.editor.lineCount() + 1;
+      end = this.cm.lineCount() + 1;
     }
 
     // Mark the area the comment seems to refer to, so we can track it
-    this.area = this.editor.markText({
+    this.area = this.cm.markText({
       line: this.end.line,
       ch: 0
     }, {
@@ -119,7 +119,7 @@
     };
 
     // Attach the element to <a href="http://codemirror.net/">CodeMirror</a>
-    this.widget = this.editor.addLineWidget(this.end.line, container, {
+    this.widget = this.cm.addLineWidget(this.end.line, container, {
       noHScroll: true,
       above: true
     });
@@ -134,7 +134,7 @@
       var range;
       if (!this.contains(e.relatedTarget)) {
         range = comment.area.find();
-        comment.hoverMarker = comment.editor.markText(
+        comment.hoverMarker = comment.cm.markText(
           range.from,
           range.to,
           { className: "com-hover" }
@@ -191,7 +191,7 @@
   };
 
   Comment.prototype.edit = function () {
-    var self = this, editor, editEl, marker;
+    var self = this, activity = false, editor, editEl, marker;
 
     marker = this.hoverMarker;
     this.hoverMarker = undefined;
@@ -208,6 +208,27 @@
 
     this.layout();
     editor.focus();
+
+    editor.on("cursorActivity", function (cm) {
+      if (!cm.somethingSelected()) {
+        activity = true;
+      }
+    });
+
+    editEl.addEventListener("keyup", function (e) {
+      if (activity === false) {
+        if (e.which === 38 || e.which === 37) {
+          // Up & left
+          self.cm.setCursor(self.marker.find().from);
+          self.cm.focus();
+        } else if (e.which === 39 || e.which === 40) {
+          // Right & down
+          self.cm.setCursor(self.marker.find().to);
+          self.cm.focus();
+        }
+      }
+      activity = false;
+    }, false);
 
     editor.on("change", function () {
       self.layout();
