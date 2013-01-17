@@ -1,3 +1,14 @@
+@font-face {
+  font-family: 'icomoon';
+  src:url('fonts/icomoon.eot');
+  src:url('fonts/icomoon.eot?#iefix') format('embedded-opentype'),
+    url('fonts/icomoon.svg#icomoon') format('svg'),
+    url('fonts/icomoon.woff') format('woff'),
+    url('fonts/icomoon.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 html, body {
   font-family: 'Open sans';
   margin: 0;
@@ -81,44 +92,71 @@ section {
 
 .comment:before {
   content: ' ';
-  width: 0;
-  height: 0;
-  display: block;
   position: absolute;
-  right: -30px;
-  border: 15px solid transparent;
-  border-left-color: white;
-  margin-top: -5px;
+  top: 5px;
+  right: -10px;
+  background: white;
+  width: 28px;
+  height: 28px;
+  box-shadow: 0.707px 0.707px 5px rgba(0, 0, 0, 0.2);
+  z-index: -1;
+  -webkit-transform: rotate(45deg);
+  -moz-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  -o-transform: rotate(45deg);
+  transform: rotate(45deg);
 }
 
 .comment button {
   border: none;
-  background: lime;
+  background: none;
   display: block;
-  width: 20px;
   height: 20px;
   position: absolute;
-  left: -20px;
+  left: -25px;
+  font-family: 'icomoon';
+  z-index: -1;
   opacity: 0;
-  -webkit-transition: opacity 0.3s ease;
-  -moz-transition: opacity 0.3s ease;
-  -ms-transition: opacity 0.3s ease;
-  -o-transition: opacity 0.3s ease;
-  transition: opacity 0.3s ease;
+  -webkit-transform: translate3d(30px, 0, 0);
+  -moz-transform: translate3d(30px, 0, 0);
+  -ms-transform: translate3d(30px, 0, 0);
+  -o-transform: translate3d(30px, 0, 0);
+  transform: translate3d(30px, 0, 0);
+  -webkit-transition: all 0.3s ease;
+  -moz-transition: all 0.3s ease;
+  -ms-transition: all 0.3s ease;
+  -o-transition: all 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .comment .delete {
   top: 30px;
-  background: red;
 }
 
-.comment:hover button {
+/* Really dodgy... */
+.comment.hover .delete,
+.comment.editing .delete,
+.comment.hover:not(.editing)  button:not(.delete) {
   opacity: 0.6;
   cursor: pointer;
+  -webkit-transform: translate3d(0, 0, 0);
+  -moz-transform: translate3d(0, 0, 0);
+  -ms-transform: translate3d(0, 0, 0);
+  -o-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 
-.comment:hover button:hover {
+.comment.editing .delete {
+  -webkit-transform: translate3d(0, -20px, 0);
+  -moz-transform: translate3d(0, -20px, 0);
+  -ms-transform: translate3d(0, -20px, 0);
+  -o-transform: translate3d(0, -20px, 0);
+  transform: translate3d(0, -20px, 0);
+}
+
+.comment.hover button:hover {
   opacity: 1;
+  text-shadow: 0 0 6px #3BA1FF;
 }
 
 .comment img {

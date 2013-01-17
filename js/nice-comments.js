@@ -22,7 +22,8 @@
 
   Comment.prototype.set = function (value) {
     this.value = value;
-    this.el.innerHTML = value;
+    this.dom.content.innerHTML = value;
+    this.dom.comment.classList.remove("editing");
     this.layout();
   };
 
@@ -100,6 +101,8 @@
     deleteButton.className = 'delete';
 
     content.innerHTML = this.value;
+    editButton.appendChild(document.createTextNode("e"));
+    deleteButton.appendChild(document.createTextNode("x"));
 
     container.appendChild(comment);
     comment.appendChild(editButton);
@@ -111,8 +114,8 @@
       container: container,
       comment: comment,
       content: content,
-      edit: editButton,
-      delte: deleteButton
+      editButton: editButton,
+      deleteButtom: deleteButton
     };
 
     // Attach the element to <a href="http://codemirror.net/">CodeMirror</a>
@@ -129,13 +132,15 @@
     // When you hover over a comment, highlight the corresponding code
     this.dom.comment.addEventListener("mouseover", function (e) {
       var range;
-      if (this === e.target && !this.contains(e.relatedTarget)) {
+      if (!this.contains(e.relatedTarget)) {
         range = comment.area.find();
         comment.hoverMarker = comment.editor.markText(
           range.from,
           range.to,
           { className: "com-hover" }
         );
+
+        this.classList.add("hover");
       }
     }, false);
 
@@ -146,35 +151,19 @@
           comment.hoverMarker.clear();
           comment.hoverMarker = undefined;
         }
+        this.classList.remove("hover");
       }
     }, false);
 
     // Start an HTML editor when code is double clicked
-    el.addEventListener("dblclick", function () {
-      var editor, editEl, marker;
+    el.addEventListener("dblclick", function (e) {
+      e.preventDefault();
+      comment.edit();
+    }, false);
 
-      marker = comment.hoverMarker;
-      comment.hoverMarker = undefined;
-
-      el.innerHTML = "";
-      editEl = document.createElement("div");
-      el.appendChild(editEl);
-      editor = comment.editor = new CodeMirror(editEl, {
-        value: comment.value,
-        mode: "text/html"
-      });
-
-      comment.layout();
-      editor.focus();
-
-      editor.on("change", function () {
-        comment.layout();
-      });
-
-      editor.on("blur", function () {
-        comment.set(editor.getValue());
-        marker.clear();
-      });
+    // ... or when the edit button is clicked
+    this.dom.editButton.addEventListener("click", function () {
+      comment.edit();
     }, false);
   };
 
@@ -199,6 +188,35 @@
         next.dom.comment.style.marginTop = pad + 'px';
       }
     }
+  };
+
+  Comment.prototype.edit = function () {
+    var self = this, editor, editEl, marker;
+
+    marker = this.hoverMarker;
+    this.hoverMarker = undefined;
+
+    this.dom.comment.classList.add("editing");
+
+    this.dom.content.innerHTML = "";
+    editEl = document.createElement("div");
+    this.dom.content.appendChild(editEl);
+    editor = this.editor = new CodeMirror(editEl, {
+      value: this.value,
+      mode: "text/html"
+    });
+
+    this.layout();
+    editor.focus();
+
+    editor.on("change", function () {
+      self.layout();
+    });
+
+    editor.on("blur", function () {
+      self.set(editor.getValue());
+      marker.clear();
+    });
   };
 
   // Redraw and setup UI stuff for all comments that have been updated
