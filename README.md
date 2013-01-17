@@ -1,2 +1,2 @@
 # Nice Comments
-A quick demo of how comments could be better used in online learning platforms.
+A quick, poorly named demo of how comments could be better used in online learning platforms.
