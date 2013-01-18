@@ -336,13 +336,7 @@
       l = data.redraw.length;
       for (i = 0; i < l; i += 1) {
         ref = data.redraw[i];
-        cm.removeLineWidget(comments[ref].widget);
-        comment = new Comment(data.comments.shift(), cm);
-        if (ref !== 0) {
-          comment.setPrevious(comments[ref - 1]);
-        }
-        comment.draw();
-        comments[ref] = comment;
+        comments[ref].set(data.comments[ref].value);
       }
     }
 
@@ -391,6 +385,7 @@
           console.log("error");
         } else {
           if (d.redraw !== "none") {
+            console.log(d.redraw);
             updateComments(cm, d);
           }
         }
