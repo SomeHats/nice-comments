@@ -62,6 +62,8 @@
       collapsed: true,
       readOnly: true
     });
+    
+    this.marker.comment = this;
 
     // Find the start of the next comment or the end of the document
     if (this.next !== undefined) {
@@ -191,7 +193,7 @@
   };
 
   Comment.prototype.edit = function () {
-    var self = this, activity = false, editor, editEl, marker;
+    var self = this, activity = true, editor, editEl, marker;
 
     marker = this.hoverMarker;
     this.hoverMarker = undefined;
@@ -215,13 +217,15 @@
       }
     });
 
-    editEl.addEventListener("keyup", function (e) {
+    editEl.addEventListener("keypress", function (e) {
+      var key;
       if (activity === false) {
-        if (e.which === 38 || e.which === 37) {
+        key = e.key || e.keyCode || e.which;
+        if (key === 38 || key === 37) {
           // Up & left
           self.cm.setCursor(self.marker.find().from);
           self.cm.focus();
-        } else if (e.which === 39 || e.which === 40) {
+        } else if (key === 39 || key === 40) {
           // Right & down
           self.cm.setCursor(self.marker.find().to);
           self.cm.focus();
@@ -308,7 +312,7 @@
   }
 
   // Add a setting for nice-comments to CodeMirror so it can be run on setup
-  CodeMirror.defineOption('niceComments', false, function (cm, val) {
+  CodeMirror.defineOption('niceComments', false, function (cm, val) {    
     if (val === false && cm.niceComments !== undefined) {
       // Remove nice comments from editor
       console.log("remove nice comments");
@@ -351,6 +355,31 @@
 
       cm.on("change", parse);
       parse(cm);
+      
+      // Try to enable normal-ish keyboard navigation into and out of comments:
+      cm.on("cursorActivity", function () {
+        var cursor, comment, markers, marker, i, l;
+        
+        if (!cm.somethingSelected()) {
+          cursor = cm.getCursor();
+          markers = cm.findMarksAt(cursor);
+          for (i = 0, l = markers.length; i < l; i += 1) {
+            if (markers[i].hasOwnProperty("comment")) {
+              comment = markers[i].comment;
+              marker = markers[i].find();
+              if (marker.from.line === cursor.line && marker.from.ch === cursor.ch) {
+                comment.edit();
+              } else if (marker.to.line === cursor.line && marker.to.ch === cursor.ch) {
+                comment.edit();
+                comment.editor.setCursor({
+                  line: comment.editor.lineCount() + 1,
+                  ch: 0
+                });
+              }
+            }
+          }
+        }
+      });
 
       // Capture load events and re-layout the comments. This is to stop
       // images or similar sitting on top of other comments. Hacky.
