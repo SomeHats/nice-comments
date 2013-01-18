@@ -288,13 +288,13 @@
   // Element.Event.js</a>
   Comment.prototype.hoverCheck = function (event, element) {
     var related = event.relatedTarget;
-    if (related == null) {
+    if (related === null) {
       return true;
     }
     if (!related) {
       return false;
     }
-    return (related != element && related.prefix != 'xul' && !element.contains(related));
+    return (related !== element && related.prefix !== 'xul' && !element.contains(related));
   };
 
   // Redraw and setup UI stuff for all comments that have been updated
