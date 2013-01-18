@@ -137,13 +137,17 @@
       comment = this;
     // When you hover over a comment, highlight the corresponding code
     function mouseEnter(e) {
-      comment.highlight();
+      if (comment.editor === undefined) {
+        comment.highlight();
+      }
       el.classList.add("hover");
     }
 
     // and when your mouse leaves the comment, remove the highlight
     function mouseLeave(e) {
-      comment.removeHighlight();
+      if (comment.editor === undefined) {
+        comment.removeHighlight();
+      }
       el.classList.remove("hover");
     }
 
@@ -232,10 +236,12 @@
         key = e.key || e.keyCode || e.which;
         if (key === 38 || key === 37) {
           // Up & left
+          self.cm.niceComments.suppressCursor = true;
           self.cm.setCursor(self.marker.find().from);
           self.cm.focus();
         } else if (key === 39 || key === 40) {
           // Right & down
+          self.cm.niceComments.suppressCursor = true;
           self.cm.setCursor(self.marker.find().to);
           self.cm.focus();
         }
@@ -250,6 +256,7 @@
     editor.on("blur", function () {
       self.removeHighlight();
       self.set(editor.getValue());
+      self.editor = undefined;
     });
   };
 
@@ -359,6 +366,7 @@
 
   // Add a setting for nice-comments to CodeMirror so it can be run on setup
   CodeMirror.defineOption('niceComments', false, function (cm, val) {
+    var changeContext = false;
     if (val === false && cm.niceComments !== undefined) {
       // Remove nice comments from editor
       console.log("remove nice comments");
@@ -402,9 +410,16 @@
       cm.on("change", parse);
       parse(cm);
 
-      // Try to enable normal-ish keyboard navigation into and out of comments:
+      // Is the cursor on the border of any of the comment areas?
       cm.on("cursorActivity", function () {
         var cursor, comment, markers, marker, i, l;
+
+        changeContext = false;
+
+        if (cm.niceComments.suppressCursor) {
+          cm.niceComments.suppressCursor = false;
+          return;
+        }
 
         if (!cm.somethingSelected()) {
           cursor = cm.getCursor();
@@ -413,19 +428,39 @@
             if (markers[i].hasOwnProperty("comment")) {
               comment = markers[i].comment;
               marker = markers[i].find();
-              if (marker.from.line === cursor.line && marker.from.ch === cursor.ch) {
-                comment.edit();
-              } else if (marker.to.line === cursor.line && marker.to.ch === cursor.ch) {
-                comment.edit();
-                comment.editor.setCursor({
-                  line: comment.editor.lineCount() + 1,
-                  ch: 0
-                });
+              if ((marker.from.line === cursor.line &&
+                  marker.from.ch === cursor.ch) ||
+                  (marker.to.line === cursor.line &&
+                  marker.to.ch === cursor.ch)) {
+                changeContext = comment;
+                break;
               }
             }
           }
         }
       });
+
+      // Try to work out where to put the cursor according to this.
+      cm.display.wrapper.addEventListener("keydown", function (e) {
+        var key;
+        console.log(cm.display.wrapper.classList);
+        if (changeContext !== false) {
+          key = e.key || e.keyCode || e.which;
+
+          if (key === 38 || key === 37) {
+            // Up & left - start at the end
+            changeContext.edit();
+            changeContext.editor.setCursor({
+              line: changeContext.editor.lineCount() + 1,
+              ch: 0
+            });
+          } else if (key === 39 || key === 40) {
+            // Right & down - start at the start
+            changeContext.edit();
+          }
+        }
+        changeContext = false;
+      }, false);
 
       // Capture load events and re-layout the comments. This is to stop
       // images or similar sitting on top of other comments. Hacky.
