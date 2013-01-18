@@ -8,6 +8,11 @@
   */
   'use strict';
 
+  // Check browser support for mouseenter/mouseleave events:
+  var supports = {
+    mouseenter: (document.documentElement.onmouseenter !== undefined)
+  };
+
   // Comment holds all the information about a comment, and is in control of
   // rendering and updating it.
   function Comment(comment, cm) {
@@ -62,7 +67,7 @@
       collapsed: true,
       readOnly: true
     });
-    
+
     this.marker.comment = this;
 
     // Find the start of the next comment or the end of the document
@@ -121,44 +126,49 @@
     };
 
     // Attach the element to <a href="http://codemirror.net/">CodeMirror</a>
-    this.widget = this.cm.addLineWidget(this.end.line, container, {
-      noHScroll: true,
-      above: true
+    this.widget = this.cm.addLineWidget(this.start.line - 1, container, {
+      noHScroll: true
     });
   };
 
   // Interactivey stuff
   Comment.prototype.setBehaviour = function () {
-    var el = this.dom.content,
+    var el = this.dom.comment,
       comment = this;
     // When you hover over a comment, highlight the corresponding code
-    this.dom.comment.addEventListener("mouseover", function (e) {
-      var range;
-      if (!this.contains(e.relatedTarget)) {
-        range = comment.area.find();
-        comment.hoverMarker = comment.cm.markText(
-          range.from,
-          range.to,
-          { className: "com-hover" }
-        );
-
-        this.classList.add("hover");
-      }
-    }, false);
+    function mouseEnter(e) {
+      comment.highlight();
+      el.classList.add("hover");
+    }
 
     // and when your mouse leaves the comment, remove the highlight
-    this.dom.comment.addEventListener("mouseout", function (e) {
-      if (!this.contains(e.relatedTarget)) {
-        if (comment.hoverMarker !== undefined) {
-          comment.hoverMarker.clear();
-          comment.hoverMarker = undefined;
+    function mouseLeave(e) {
+      comment.removeHighlight();
+      el.classList.remove("hover");
+    }
+
+    // Use native mouseenter/leave for browsers that support <a
+    // href="http://www.w3.org/TR/DOM-Level-3-Events/#event-type-mouseenter">
+    // DOM Level 3 Events
+    if (supports.mouseenter) {
+      el.addEventListener("mouseenter", mouseEnter, false);
+      el.addEventListener("mouseleave", mouseLeave, false);
+    } else {
+      // Fall back to the polyfill for those that don't
+      el.addEventListener("mouseover", function (e) {
+        if (comment.hoverCheck(e, this)) {
+          mouseEnter(e);
         }
-        this.classList.remove("hover");
-      }
-    }, false);
+      }, false);
+      el.addEventListener("mouseout", function (e) {
+        if (comment.hoverCheck(e, this)) {
+          mouseLeave(e);
+        }
+      }, false);
+    }
 
     // Start an HTML editor when code is double clicked
-    el.addEventListener("dblclick", function (e) {
+    this.dom.content.addEventListener("dblclick", function (e) {
       e.preventDefault();
       comment.edit();
     }, false);
@@ -195,8 +205,7 @@
   Comment.prototype.edit = function () {
     var self = this, activity = true, editor, editEl, marker;
 
-    marker = this.hoverMarker;
-    this.hoverMarker = undefined;
+    this.highlight();
 
     this.dom.comment.classList.add("editing");
 
@@ -217,7 +226,7 @@
       }
     });
 
-    editEl.addEventListener("keypress", function (e) {
+    editEl.addEventListener("keydown", function (e) {
       var key;
       if (activity === false) {
         key = e.key || e.keyCode || e.which;
@@ -239,9 +248,46 @@
     });
 
     editor.on("blur", function () {
+      self.removeHighlight();
       self.set(editor.getValue());
-      marker.clear();
     });
+  };
+
+  // Highlight code that corresponds to this comment
+  Comment.prototype.highlight = function () {
+    var range;
+    this.removeHighlight();
+    range = this.area.find();
+    this.hoverMarker = this.cm.markText(
+      {
+        line: range.from.line,
+        ch: 0
+      },
+      range.to,
+      { className: "com-hover" }
+    );
+  };
+
+  // Remove highlight on relevant code
+  Comment.prototype.removeHighlight = function () {
+    if (this.hoverMarker !== undefined) {
+      this.hoverMarker.clear();
+      this.hoverMarker = undefined;
+    }
+  };
+
+  // Polyfill mouseenter & mouseleave events. Taken from the Mootools core:
+  // <a href="https://github.com/mootools/mootools-core/blob/master/Source/Element/Element.Event.js#L152-L156">
+  // Element.Event.js</a>
+  Comment.prototype.hoverCheck = function (event, element) {
+    var related = event.relatedTarget;
+    if (related == null) {
+      return true;
+    }
+    if (!related) {
+      return false;
+    }
+    return (related != element && related.prefix != 'xul' && !element.contains(related));
   };
 
   // Redraw and setup UI stuff for all comments that have been updated
@@ -312,7 +358,7 @@
   }
 
   // Add a setting for nice-comments to CodeMirror so it can be run on setup
-  CodeMirror.defineOption('niceComments', false, function (cm, val) {    
+  CodeMirror.defineOption('niceComments', false, function (cm, val) {
     if (val === false && cm.niceComments !== undefined) {
       // Remove nice comments from editor
       console.log("remove nice comments");
@@ -355,11 +401,11 @@
 
       cm.on("change", parse);
       parse(cm);
-      
+
       // Try to enable normal-ish keyboard navigation into and out of comments:
       cm.on("cursorActivity", function () {
         var cursor, comment, markers, marker, i, l;
-        
+
         if (!cm.somethingSelected()) {
           cursor = cm.getCursor();
           markers = cm.findMarksAt(cursor);
